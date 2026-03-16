@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CRITICAL_SESSION_YUSHA</title>
+    <style>
+        body, html {
+            background-color: #000;
+            color: #ccc;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0; padding: 0;
+            height: 100vh; width: 100vw;
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        #stage { text-align: center; width: 90%; z-index: 5; position: relative; }
+        .hidden { display: none; }
+
+        /* FIXED TEXT SPACING */
+        #q-text { 
+            font-size: 1.3rem; 
+            line-height: 1.6; 
+            min-height: 160px; 
+            color: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px;
+        }
+
+        button {
+            background: #0a0a0a; color: #666; border: 1px solid #222;
+            padding: 25px; width: 90%; max-width: 300px;
+            cursor: pointer; font-family: inherit; margin: 15px auto; 
+            display: block; font-weight: bold; border-radius: 8px;
+            text-transform: uppercase; letter-spacing: 2px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:active { background: #1a1a1a; color: #fff; }
+
+        /* THE GHOST OVERLAY */
+        #scare-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 1000;
+            display: none; justify-content: center; align-items: center;
+        }
+        #scare-img { 
+            width: 100%; height: 100%; 
+            object-fit: contain;
+            filter: contrast(130%) brightness(90%);
+        }
+
+        /* SHAKING EFFECTS */
+        .shake { animation: extremeShake 0.08s infinite; }
+        @keyframes extremeShake {
+            0% { transform: translate(6px, 6px); }
+            50% { transform: translate(-6px, -6px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        #final-msg { color: #b00; font-size: 1.1rem; line-height: 1.8; white-space: pre-wrap; font-weight: bold; }
+    </style>
+</head>
+<body id="bg">
+
+<div id="scare-overlay">
+    <img id="scare-img" src="https://i.postimg.cc/PxWRyG8d/Screenshot-2.png" alt="">
+</div>
+
+<div id="stage">
+    <div id="start-box">
+        <p style="letter-spacing: 5px; color: #333; font-size: 0.7rem;">[ SESSION_MONITOR: YUSHA ]</p>
+        <button onclick="init()">BEGIN EVALUATION</button>
+    </div>
+
+    <div id="test-box" class="hidden">
+        <div id="q-text"></div>
+        <div id="btn-container" style="margin-top: 20px;">
+            <button onclick="handleBtn()" id="b1">YES</button>
+            <button onclick="handleBtn()" id="b2">NO</button>
+        </div>
+    </div>
+
+    <div id="final-box" class="hidden">
+        <div id="final-msg"></div>
+    </div>
+</div>
+
+<script>
+    let step = 0;
+    let audioCtx, drone;
+    const name = "Yusha"; 
+
+    const questions = [
+        "Is it dark in the room right now?",
+        "Do you hear the high-pitched ringing in your left ear?",
+        "Do you ever feel like someone is standing right behind your head?",
+        "Why are you holding the phone so tight, " + name + "?",
+        "Does it bother you that She knows exactly where you are?",
+        "Have you checked the hallway tonight?",
+        "If She screamed right now, would anyone hear you?",
+        "The person in the mirror isn't you.",
+        "It's just a shell for Her to use.",
+        "She is watching your eyes move across these words.",
+        "Don't blink.",
+        "Are you afraid of the dark?",
+        "ARE YOU AFRAID OF HER?",
+        "SHE IS RIGHT HERE.", // JUMPSCARE TRIGGER
+        "LOOK BEHIND YOU.",
+        "HAPPY BIRTHDAY."
+    ];
+
+    function initAudio() {
+        if (audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Background Drone (Sawtooth for creepy buzz)
+        drone = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        drone.type = 'sawtooth';
+        drone.frequency.setValueAtTime(38, audioCtx.currentTime); 
+        g.gain.setValueAtTime(0.02, audioCtx.currentTime);
+        drone.connect(g); g.connect(audioCtx.destination);
+        drone.start();
+        
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    function screamEffect() {
+        const s = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        s.type = 'sawtooth';
+        s.frequency.setValueAtTime(800, audioCtx.currentTime);
+        s.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.6);
+        g.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+        s.connect(g); g.connect(audioCtx.destination);
+        s.start(); s.stop(audioCtx.currentTime + 0.6);
+    }
+
+    function init() {
+        initAudio();
+        document.getElementById('start-box').classList.add('hidden');
+        document.getElementById('test-box').classList.remove('hidden');
+        type();
+    }
+
+    function type() {
+        const target = document.getElementById('q-text');
+        target.innerHTML = ""; // Using innerHTML to ensure &nbsp; works
+        let txt = questions[step];
+        let i = 0;
+        
+        const interval = setInterval(() => {
+            // Using &nbsp; for spaces to prevent mobile clumping
+            if (txt[i] === " ") {
+                target.innerHTML += "&nbsp;";
+            } else {
+                target.innerHTML += txt[i];
+            }
+            i++;
+            if (i >= txt.length) {
+                clearInterval(interval);
+                if (step === 13) {
+                    setTimeout(triggerJumpScare, 500);
+                }
+            }
+        }, 45);
+    }
+
+    function triggerJumpScare() {
+        const overlay = document.getElementById('scare-overlay');
+        overlay.style.display = "flex";
+        document.body.classList.add('shake');
+        screamEffect();
+        
+        // The flash lasts long enough to be terrifying
+        setTimeout(() => {
+            overlay.style.display = "none";
+            document.body.classList.remove('shake');
+            handleBtn();
+        }, 800);
+    }
+
+    function handleBtn() {
+        if (step === 13) { step++; return; }
+        step++;
+        if (step < questions.length) {
+            type();
+        } else {
+            finish();
+        }
+    }
+
+    function finish() {
+        document.getElementById('test-box').classList.add('hidden');
+        document.getElementById('final-box').classList.remove('hidden');
+        const target = document.getElementById('final-msg');
+        const msg = `EVALUATION_COMPLETE.\n\nSHE SAYS YOU HAVE SURVIVED ANOTHER YEAR.\n\nHAPPY BIRTHDAY, ${name.toUpperCase()}.\n\nSHE WILL BE WATCHING YOU SLEEP TONIGHT.`;
+        
+        let i = 0;
+        const typer = setInterval(() => {
+            if (msg[i] === "\n") {
+                target.innerHTML += "<br>";
+            } else {
+                target.innerHTML += msg[i];
+            }
+            i++;
+            if (i >= msg.length) {
+                clearInterval(typer);
+                // Final low frequency thud
+                const thud = audioCtx.createOscillator();
+                thud.frequency.setValueAtTime(20, audioCtx.currentTime);
+                thud.connect(audioCtx.destination);
+                thud.start(); thud.stop(audioCtx.currentTime + 1.5);
+            }
+        }, 80);
+    }
+</script>
+</body>
+</html>
