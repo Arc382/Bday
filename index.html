@@ -29,6 +29,8 @@
             justify-content: center;
             text-align: center;
             padding: 10px;
+            white-space: pre-wrap; /* Forces normal text wrapping on mobile */
+            word-wrap: break-word;
         }
 
         button {
@@ -153,17 +155,12 @@
 
     function type() {
         const target = document.getElementById('q-text');
-        target.innerHTML = ""; // Using innerHTML to ensure &nbsp; works
+        target.textContent = ""; // Use textContent for clean text rendering
         let txt = questions[step];
         let i = 0;
         
         const interval = setInterval(() => {
-            // Using &nbsp; for spaces to prevent mobile clumping
-            if (txt[i] === " ") {
-                target.innerHTML += "&nbsp;";
-            } else {
-                target.innerHTML += txt[i];
-            }
+            target.textContent += txt[i]; // Just append the character normally
             i++;
             if (i >= txt.length) {
                 clearInterval(interval);
